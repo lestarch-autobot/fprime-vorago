@@ -21,12 +21,14 @@
 
 #include "Va416x0/Os/SeggerTerminal/RTT/RTT/SEGGER_RTT.h"
 
+#include "Fw/Types/Assert.hpp"
 #include "Os/Delegate.hpp"
 #include "SeggerConsole.hpp"
 
 namespace Va416x0Os {
 
 void SeggerConsole::writeMessage(const CHAR* message, const FwSizeType size) {
+    FW_ASSERT(message != nullptr || size == 0);
     // TODO: Do any locks need to be taken here?
     SEGGER_RTT_Write(0, message, size);
 }
