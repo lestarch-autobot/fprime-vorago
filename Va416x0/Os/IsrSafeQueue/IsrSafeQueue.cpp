@@ -67,6 +67,10 @@ Os::QueueInterface::Status IsrSafeQueue::create(FwEnumStoreType id,
                                                 const Fw::ConstStringBase& name,
                                                 FwSizeType depth,
                                                 FwSizeType messageSize) {
+    const QueueInterface::Status checkStatus = this->createChecks(depth, messageSize);
+    if (checkStatus != QueueInterface::Status::OP_OK) {
+        return checkStatus;
+    }
     // Ensure we are created exactly once
     FW_ASSERT(this->m_handle.m_indices == nullptr);
     FW_ASSERT(this->m_handle.m_sizes == nullptr);
@@ -124,6 +128,7 @@ Os::QueueInterface::Status IsrSafeQueue::create(FwEnumStoreType id,
     this->m_handle.m_depth = depth;
     this->m_handle.m_highMark = 0;
 
+    this->finishCreate(*this, name, depth, messageSize);
     return QueueInterface::Status::OP_OK;
 }
 
@@ -144,12 +149,17 @@ void IsrSafeQueue::teardown() {
         this->m_handle.m_indices = nullptr;
         this->m_handle.m_sizes = nullptr;
     }
+    this->finishTeardown();
 }
 
 Os::QueueInterface::Status IsrSafeQueue::send(const U8* buffer,
                                               FwSizeType size,
                                               FwQueuePriorityType priority,
                                               QueueInterface::BlockingType blockType) {
+    const QueueInterface::Status checkStatus = this->sendChecks(buffer, size);
+    if (checkStatus != QueueInterface::Status::OP_OK) {
+        return checkStatus;
+    }
     // Check for sizing problem before locking
     if (size > this->m_handle.m_maxSize) {
         return Os::QueueInterface::Status::SIZE_MISMATCH;
@@ -177,6 +187,10 @@ Os::QueueInterface::Status IsrSafeQueue::receive(U8* destination,
                                                  QueueInterface::BlockingType blockType,
                                                  FwSizeType& actualSize,
                                                  FwQueuePriorityType& priority) {
+    const QueueInterface::Status checkStatus = this->receiveChecks(destination, capacity);
+    if (checkStatus != QueueInterface::Status::OP_OK) {
+        return checkStatus;
+    }
     {
         Va416x0Mmio::Lock::CriticalSectionLock lock;
         if (this->m_handle.m_heap.isEmpty()) {
